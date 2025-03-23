@@ -29,17 +29,28 @@ jobs:
         python -m pip install --upgrade pip
         pip install requests psutil
     
+    - name: Validate APP_URL
+      run: |
+        if [ -z "${{ secrets.APP_URL }}" ]; then
+          echo "Error: APP_URL secret is not set"
+          exit 1
+        fi
+    
     - name: Run health check
       if: github.event.inputs.test_type == 'health' || github.event.inputs.test_type == 'all'
+      env:
+        APP_URL: ${{ secrets.APP_URL }}
       run: |
         echo "Running health check..."
-        python scripts/health_check.py ${{ secrets.APP_URL }}
+        python scripts/health_check.py $APP_URL
     
     - name: Run status check
       if: github.event.inputs.test_type == 'status' || github.event.inputs.test_type == 'all'
+      env:
+        APP_URL: ${{ secrets.APP_URL }}
       run: |
         echo "Running status check..."
-        python scripts/status_check.py ${{ secrets.APP_URL }}
+        python scripts/status_check.py $APP_URL
     
     - name: Summary
       run: |

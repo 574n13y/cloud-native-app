@@ -22,15 +22,31 @@ jobs:
         python -m pip install --upgrade pip
         pip install requests psutil
     
+    - name: Validate required secrets
+      run: |
+        if [ -z "${{ secrets.APP_URL }}" ]; then
+          echo "Error: APP_URL secret is not set"
+          exit 1
+        fi
+        if [ -z "${{ secrets.GIST_SECRET }}" ]; then
+          echo "Warning: GIST_SECRET is not set. Status badge will not be updated."
+        fi
+        if [ -z "${{ secrets.GIST_ID }}" ]; then
+          echo "Warning: GIST_ID is not set. Status badge will not be updated."
+        fi
+    
     - name: Run status check
       id: status
+      env:
+        APP_URL: ${{ secrets.APP_URL }}
       run: |
-        OUTPUT=$(python scripts/status_check.py ${{ secrets.APP_URL }})
+        OUTPUT=$(python scripts/status_check.py $APP_URL)
         echo "status_output<<EOF" >> $GITHUB_ENV
         echo "$OUTPUT" >> $GITHUB_ENV
         echo "EOF" >> $GITHUB_ENV
     
     - name: Update status badge
+      if: success() && secrets.GIST_SECRET != '' && secrets.GIST_ID != ''
       uses: schneegans/dynamic-badges-action@v1.6.0
       with:
         auth: ${{ secrets.GIST_SECRET }}
@@ -41,47 +57,44 @@ jobs:
         color: ${{ job.status == 'success' && 'success' || 'critical' }}
     
     - name: Create status report
+      if: always()
       uses: actions/github-script@v6
       with:
         script: |
           const date = new Date().toISOString();
-          const status = process.env.status_output;
+          const status = process.env.status_output || 'Status check failed to run';
           
-          // Create or update status report issue
-          const issues = await github.rest.issues.listForRepo({
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            labels: ['status-report'],
-            state: 'open'
-          });
-          
-          const body = `## Status Report (${date})
+          const title = `📊 Service Status Report (${date})`;
+          const body = `## Status Report
           \`\`\`json
           ${status}
-          \`\`\``;
+          \`\`\`
           
-          if (issues.data.length > 0) {
-            await github.rest.issues.update({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: issues.data[0].number,
-              body: body
-            });
-          } else {
-            await github.rest.issues.create({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              title: '📊 Service Status Report',
-              body: body,
-              labels: ['status-report']
-            });
+          Status: ${process.env.status_output ? 'Completed' : 'Failed to run'}`;
+          
+          const labels = ['status-report'];
+          if (!process.env.status_output) {
+            labels.push('failed');
           }
+          
+          // Create new issue
+          await github.rest.issues.create({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            title: title,
+            body: body,
+            labels: labels
+          });
     
     - name: Send metrics to CloudWatch
-      if: false  # Disabled by default, enable if using AWS
-      uses: aws-actions/configure-aws-credentials@v1
-      with:
-        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-region: ${{ secrets.AWS_REGION }}
-      # Add CloudWatch metrics push here if needed
+      if: false  # Disabled by default
+      env:
+        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        AWS_REGION: ${{ secrets.AWS_REGION }}
+      run: |
+        if [ -n "$AWS_ACCESS_KEY_ID" ] && [ -n "$AWS_SECRET_ACCESS_KEY" ] && [ -n "$AWS_REGION" ]; then
+          echo "CloudWatch metrics integration is ready to be implemented"
+        else
+          echo "Skipping CloudWatch metrics - AWS credentials not configured"
+        fi
