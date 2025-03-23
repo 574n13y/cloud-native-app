@@ -36,6 +36,12 @@ docker build -t cloud-native-app .
 docker run -p 8000:8000 cloud-native-app
 ```
 
+![Screenshot 2025-03-23 195919](https://github.com/user-attachments/assets/620ff69e-c814-4042-803e-dc63db5a3e0c)
+
+![Screenshot 2025-03-23 195944](https://github.com/user-attachments/assets/d7491b52-c5e5-4ceb-b947-e662770bbc0c)
+
+![Screenshot 2025-03-23 195955](https://github.com/user-attachments/assets/ce2b8302-2774-4bb5-af9b-373aab3bb5a8)
+
 ## API Endpoints
 - `/`: Interactive web interface
 - `/tasks`: Task management endpoints (GET, POST, DELETE)
