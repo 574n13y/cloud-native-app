@@ -1,11 +1,15 @@
-# Cloud Native Application
+# Cloud Native Application v2.0.0
 
-A modern cloud-native application built with FastAPI, ready for containerization and deployment.
+A modern cloud-native application built with FastAPI, featuring an interactive UI and comprehensive CI/CD pipeline.
 
 ## Features
+- Modern web interface with Tailwind CSS
+- Task management system (create, list, delete tasks)
+- Real-time health monitoring
 - RESTful API endpoints
-- Health check endpoint
-- Docker support
+- Automated CI/CD with GitHub Actions
+- Docker containerization
+- Comprehensive test suite
 - OpenAPI documentation
 
 ## Quick Start
@@ -33,10 +37,22 @@ docker run -p 8000:8000 cloud-native-app
 ```
 
 ## API Endpoints
-- `/`: Welcome message
-- `/health`: Health check endpoint
+- `/`: Interactive web interface
+- `/tasks`: Task management endpoints (GET, POST, DELETE)
+- `/health`: Health check endpoint with real-time monitoring
 - `/docs`: OpenAPI documentation (Swagger UI)
 - `/redoc`: Alternative API documentation
 
 ## Development
-The application uses FastAPI with automatic reload enabled during development.
+- FastAPI with automatic reload enabled
+- Comprehensive test suite with pytest
+- GitHub Actions for automated testing and deployment
+- Container registry integration
+
+## CI/CD Pipeline
+The application includes a complete CI/CD pipeline that:
+- Runs automated tests
+- Generates test coverage reports
+- Builds and pushes Docker images
+- Deploys to container registry
+- Ensures code quality

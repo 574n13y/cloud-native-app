@@ -10,7 +10,7 @@ from datetime import datetime
 
 app = FastAPI(title="Cloud Native App",
              description="A cloud-native FastAPI application",
-             version="1.0.0")
+             version="2.0.0")
 
 templates = Jinja2Templates(directory="templates")
 
@@ -39,7 +39,7 @@ async def root(request: Request):
 async def health_check():
     return HealthCheck(
         status="healthy",
-        version="1.0.0"
+        version="2.0.0"
     )
 
 @app.get("/tasks", response_model=List[Task])
