@@ -23,7 +23,14 @@ jobs:
         pip install requests
     
     - name: Run health check
-      run: python scripts/health_check.py ${{ secrets.APP_URL }}
+      env:
+        APP_URL: ${{ secrets.APP_URL }}
+      run: |
+        if [ -z "$APP_URL" ]; then
+          echo "Error: APP_URL secret is not set"
+          exit 1
+        fi
+        python scripts/health_check.py $APP_URL
       continue-on-error: true
     
     - name: Create health check issue if failed
@@ -40,11 +47,10 @@ jobs:
           })
     
     - name: Notify on Slack
-      if: failure()
+      if: failure() && secrets.SLACK_WEBHOOK_URL
       uses: 8398a7/action-slack@v3
       with:
         status: ${{ job.status }}
         fields: repo,message,commit,author,action,eventName,ref,workflow,job,took
       env:
         SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-      continue-on-error: true
