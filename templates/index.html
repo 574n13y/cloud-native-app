@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Cloud Native App</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100">
+    <div class="container mx-auto px-4 py-8">
+        <h1 class="text-4xl font-bold mb-8 text-center text-blue-600">Cloud Native App Dashboard</h1>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Task Form -->
+            <div class="bg-white p-6 rounded-lg shadow-md">
+                <h2 class="text-2xl font-semibold mb-4">Create New Task</h2>
+                <form id="taskForm" class="space-y-4">
+                    <div>
+                        <label class="block text-gray-700">Title</label>
+                        <input type="text" name="title" class="w-full p-2 border rounded" required>
+                    </div>
+                    <div>
+                        <label class="block text-gray-700">Description</label>
+                        <textarea name="description" class="w-full p-2 border rounded" rows="3" required></textarea>
+                    </div>
+                    <button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
+                        Create Task
+                    </button>
+                </form>
+            </div>
+
+            <!-- Task List -->
+            <div class="bg-white p-6 rounded-lg shadow-md">
+                <h2 class="text-2xl font-semibold mb-4">Tasks</h2>
+                <div id="taskList" class="space-y-4">
+                    <!-- Tasks will be inserted here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Health Status -->
+        <div class="mt-8 bg-white p-6 rounded-lg shadow-md">
+            <h2 class="text-2xl font-semibold mb-4">System Health</h2>
+            <div id="healthStatus" class="text-lg">
+                Checking system status...
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Fetch tasks on page load
+        fetchTasks();
+        checkHealth();
+        setInterval(checkHealth, 30000);
+
+        // Handle form submission
+        document.getElementById('taskForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            const task = {
+                title: formData.get('title'),
+                description: formData.get('description')
+            };
+
+            try {
+                const response = await fetch('/tasks', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(task)
+                });
+                if (response.ok) {
+                    e.target.reset();
+                    fetchTasks();
+                }
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        });
+
+        async function fetchTasks() {
+            try {
+                const response = await fetch('/tasks');
+                const tasks = await response.json();
+                const taskList = document.getElementById('taskList');
+                taskList.innerHTML = tasks.map(task => `
+                    <div class="border p-4 rounded">
+                        <h3 class="font-semibold">${task.title}</h3>
+                        <p class="text-gray-600">${task.description}</p>
+                        <button onclick="deleteTask('${task.id}')" class="text-red-500 text-sm mt-2">
+                            Delete
+                        </button>
+                    </div>
+                `).join('');
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        }
+
+        async function deleteTask(taskId) {
+            try {
+                const response = await fetch(`/tasks/${taskId}`, {
+                    method: 'DELETE'
+                });
+                if (response.ok) {
+                    fetchTasks();
+                }
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        }
+
+        async function checkHealth() {
+            try {
+                const response = await fetch('/health');
+                const health = await response.json();
+                const healthStatus = document.getElementById('healthStatus');
+                healthStatus.innerHTML = `
+                    <div class="flex items-center">
+                        <span class="w-3 h-3 rounded-full ${health.status === 'healthy' ? 'bg-green-500' : 'bg-red-500'} mr-2"></span>
+                        <span>Status: ${health.status}</span>
+                        <span class="ml-4">Version: ${health.version}</span>
+                    </div>
+                `;
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        }
+    </script>
+</body>
+</html>
