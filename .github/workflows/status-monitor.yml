@@ -1,0 +1,87 @@
+name: Status Monitor
+
+on:
+  schedule:
+    - cron: '*/30 * * * *'  # Run every 30 minutes
+  workflow_dispatch:  # Allow manual triggering
+
+jobs:
+  monitor:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v2
+    
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.11'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install requests psutil
+    
+    - name: Run status check
+      id: status
+      run: |
+        OUTPUT=$(python scripts/status_check.py ${{ secrets.APP_URL }})
+        echo "status_output<<EOF" >> $GITHUB_ENV
+        echo "$OUTPUT" >> $GITHUB_ENV
+        echo "EOF" >> $GITHUB_ENV
+    
+    - name: Update status badge
+      uses: schneegans/dynamic-badges-action@v1.6.0
+      with:
+        auth: ${{ secrets.GIST_SECRET }}
+        gistID: ${{ secrets.GIST_ID }}
+        filename: cloud_native_app_status.json
+        label: status
+        message: ${{ job.status }}
+        color: ${{ job.status == 'success' && 'success' || 'critical' }}
+    
+    - name: Create status report
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const date = new Date().toISOString();
+          const status = process.env.status_output;
+          
+          // Create or update status report issue
+          const issues = await github.rest.issues.listForRepo({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            labels: ['status-report'],
+            state: 'open'
+          });
+          
+          const body = `## Status Report (${date})
+          \`\`\`json
+          ${status}
+          \`\`\``;
+          
+          if (issues.data.length > 0) {
+            await github.rest.issues.update({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issues.data[0].number,
+              body: body
+            });
+          } else {
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: '📊 Service Status Report',
+              body: body,
+              labels: ['status-report']
+            });
+          }
+    
+    - name: Send metrics to CloudWatch
+      if: false  # Disabled by default, enable if using AWS
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ secrets.AWS_REGION }}
+      # Add CloudWatch metrics push here if needed
